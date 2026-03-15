@@ -8,6 +8,8 @@ AI-powered flowchart, ERD, and swimlane diagram builder.
 
 AI Charts combines a built-in AI assistant for quick chart creation with an MCP server that lets external AI tools like Claude Desktop and Cursor create and manage charts programmatically. It works with any OpenAI-compatible LLM provider — Ollama, OpenAI, or your own endpoint. No vendor lock-in.
 
+![AI Charts Screenshot](assets/ai-charts-screenshot.png)
+
 ## Features
 
 - **Three chart types** — flowcharts, entity-relationship diagrams, and swimlane diagrams
