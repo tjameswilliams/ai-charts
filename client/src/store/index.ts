@@ -43,6 +43,9 @@ interface AppState {
   exportChart: (id: string) => Promise<void>;
   importChart: (file: File) => Promise<void>;
 
+  // Templates
+  createChartFromTemplate: (data: Partial<Chart>, templateId: string) => Promise<void>;
+
   // Nodes
   nodes: FlowNode[];
   loadNodes: () => Promise<void>;
@@ -117,9 +120,25 @@ interface AppState {
   redo: () => Promise<void>;
   refreshUndoState: () => Promise<void>;
 
+  // Clipboard
+  clipboard: { nodes: FlowNode[]; edges: FlowEdge[] } | null;
+  copySelection: () => void;
+  pasteClipboard: () => Promise<void>;
+  duplicateSelection: () => Promise<void>;
+
+  // Edge routing
+  edgeRoutingMode: "bezier" | "straight" | "orthogonal";
+  setEdgeRoutingMode: (mode: "bezier" | "straight" | "orthogonal") => Promise<void>;
+
   // Canvas export
   canvasExportFn: ((format: "png" | "svg", crop: boolean, theme: "dark" | "light") => Promise<string>) | null;
   setCanvasExportFn: (fn: ((format: "png" | "svg", crop: boolean, theme: "dark" | "light") => Promise<string>) | null) => void;
+
+  // Snap-to-grid
+  snapToGrid: boolean;
+  gridSize: number;
+  toggleSnapToGrid: () => void;
+  setGridSize: (n: number) => void;
 
   // Full reload
   loadAll: () => Promise<void>;
@@ -201,7 +220,14 @@ export const useStore = create<AppState>((set, get) => ({
       return;
     }
     const chart = await api.charts.get(id);
-    set({ activeChart: chart });
+    const routingMode = (() => {
+      try {
+        const s = JSON.parse((chart as Chart & { settingsJson?: string }).settingsJson || "{}");
+        if (s.edgeRoutingMode && ["bezier", "straight", "orthogonal"].includes(s.edgeRoutingMode)) return s.edgeRoutingMode;
+      } catch { /* ignore */ }
+      return "bezier";
+    })() as "bezier" | "straight" | "orthogonal";
+    set({ activeChart: chart, edgeRoutingMode: routingMode });
     await Promise.all([get().loadNodes(), get().loadEdges(), get().loadGroups()]);
     get().refreshUndoState();
   },
@@ -251,6 +277,53 @@ export const useStore = create<AppState>((set, get) => ({
     const result = await api.projectExport.importChart(p.id, file);
     await get().loadCharts();
     await get().selectChart(result.chartId);
+  },
+
+  // Templates
+  createChartFromTemplate: async (data, templateId) => {
+    const template = await api.templates.get(templateId);
+    const chart = await get().createChart(data);
+
+    // Create nodes and build ID remap
+    const idRemap: Record<string, string> = {};
+    for (const tNode of template.nodes) {
+      const styleJson = (tNode.width || tNode.height)
+        ? JSON.stringify({ width: tNode.width, height: tNode.height })
+        : "{}";
+      const node = await get().createNode({
+        type: tNode.type,
+        label: tNode.label,
+        description: tNode.description,
+        styleJson,
+      });
+      idRemap[tNode.temp_id] = node.id;
+    }
+
+    // Create edges with remapped IDs
+    for (const tEdge of template.edges) {
+      const fromNodeId = idRemap[tEdge.from_temp_id];
+      const toNodeId = idRemap[tEdge.to_temp_id];
+      if (fromNodeId && toNodeId) {
+        await get().createEdge({
+          fromNodeId,
+          toNodeId,
+          type: tEdge.type,
+          label: tEdge.label || "",
+        });
+      }
+    }
+
+    // Create groups with remapped node IDs
+    if (template.groups) {
+      for (const tGroup of template.groups) {
+        const nodeIds = tGroup.node_temp_ids
+          .map((tid: string) => idRemap[tid])
+          .filter(Boolean);
+        if (nodeIds.length > 0) {
+          await get().createGroup(tGroup.label, nodeIds, tGroup.color);
+        }
+      }
+    }
   },
 
   // Nodes
@@ -914,9 +987,81 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  // Clipboard
+  clipboard: null,
+  copySelection: () => {
+    const { nodes, edges, selectedNodeIds, selectedNodeId } = get();
+    const ids = new Set(selectedNodeIds);
+    if (ids.size === 0 && selectedNodeId) {
+      ids.add(selectedNodeId);
+    }
+    if (ids.size === 0) {
+      set({ clipboard: null });
+      return;
+    }
+    const copiedNodes = nodes.filter((n) => ids.has(n.id));
+    const copiedEdges = edges.filter((e) => ids.has(e.fromNodeId) && ids.has(e.toNodeId));
+    set({ clipboard: { nodes: copiedNodes, edges: copiedEdges } });
+  },
+  pasteClipboard: async () => {
+    const clip = get().clipboard;
+    if (!clip || clip.nodes.length === 0) return;
+    const idRemap: Record<string, string> = {};
+    const newNodeIds = new Set<string>();
+    for (const node of clip.nodes) {
+      const newNode = await get().createNode({
+        type: node.type,
+        label: node.label,
+        description: node.description,
+        positionX: node.positionX + 20,
+        positionY: node.positionY + 20,
+        styleJson: node.styleJson,
+      });
+      idRemap[node.id] = newNode.id;
+      newNodeIds.add(newNode.id);
+    }
+    for (const edge of clip.edges) {
+      const newSource = idRemap[edge.fromNodeId];
+      const newTarget = idRemap[edge.toNodeId];
+      if (newSource && newTarget) {
+        await get().createEdge({
+          fromNodeId: newSource,
+          toNodeId: newTarget,
+          type: edge.type,
+          label: edge.label,
+          condition: edge.condition,
+        });
+      }
+    }
+    set({ selectedNodeIds: newNodeIds, selectedNodeId: null });
+  },
+  duplicateSelection: async () => {
+    get().copySelection();
+    await get().pasteClipboard();
+  },
+
+  // Edge routing
+  edgeRoutingMode: "bezier",
+  setEdgeRoutingMode: async (mode) => {
+    set({ edgeRoutingMode: mode });
+    const chart = get().activeChart;
+    if (!chart) return;
+    const currentSettings = (() => {
+      try { return JSON.parse(chart.settingsJson || "{}"); } catch { return {}; }
+    })();
+    const newSettings = { ...currentSettings, edgeRoutingMode: mode };
+    await get().updateChart(chart.id, { settingsJson: JSON.stringify(newSettings) } as Partial<Chart>);
+  },
+
   // Canvas export
   canvasExportFn: null,
   setCanvasExportFn: (fn) => set({ canvasExportFn: fn }),
+
+  // Snap-to-grid
+  snapToGrid: false,
+  gridSize: 20,
+  toggleSnapToGrid: () => set((s) => ({ snapToGrid: !s.snapToGrid })),
+  setGridSize: (n) => set({ gridSize: n }),
 
   // Full reload
   loadAll: async () => {

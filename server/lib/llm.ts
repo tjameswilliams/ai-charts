@@ -145,11 +145,15 @@ Format as a brief but complete summary that would let someone continue the conve
 function getNodeTypeEnum(chartType: string): string[] {
   switch (chartType) {
     case "erd":
-      return ["entity"];
+      return ["entity", "sticky_note"];
     case "swimlane":
-      return ["start", "end", "process", "decision", "action"];
+      return ["start", "end", "process", "decision", "action", "sticky_note"];
+    case "mindmap":
+      return ["central_topic", "main_branch", "sub_branch", "leaf", "sticky_note"];
+    case "sequence":
+      return ["actor", "participant", "lifeline_activation", "sticky_note"];
     default:
-      return ["start", "end", "process", "decision", "input_output", "data_store", "external_system", "note", "subflow_ref"];
+      return ["start", "end", "process", "decision", "input_output", "data_store", "external_system", "note", "subflow_ref", "sticky_note"];
   }
 }
 
@@ -159,6 +163,10 @@ function getEdgeTypeEnum(chartType: string): string[] {
       return ["one_to_one", "one_to_many", "many_to_many"];
     case "swimlane":
       return ["default", "conditional"];
+    case "mindmap":
+      return ["branch"];
+    case "sequence":
+      return ["sync_message", "async_message", "return_message", "self_message"];
     default:
       return ["default", "conditional", "error", "async", "fallback"];
   }
@@ -178,7 +186,7 @@ export function getAllToolDefinitions(chartType: string = "flowchart"): typeof T
 
 // Keep TOOL_DEFINITIONS for backwards compat (uses flowchart defaults)
 export const TOOL_DEFINITIONS = _buildToolDefinitions(
-  ["start", "end", "process", "decision", "input_output", "data_store", "external_system", "note", "subflow_ref"],
+  ["start", "end", "process", "decision", "input_output", "data_store", "external_system", "note", "subflow_ref", "sticky_note"],
   ["default", "conditional", "error", "async", "fallback"]
 );
 

@@ -1,0 +1,29 @@
+{
+  "name": "User Authentication",
+  "description": "User authentication flow with 2FA and access control",
+  "chartType": "flowchart",
+  "nodes": [
+    { "temp_id": "t1", "type": "start", "label": "Start" },
+    { "temp_id": "t2", "type": "process", "label": "Enter Credentials" },
+    { "temp_id": "t3", "type": "decision", "label": "Valid Credentials?" },
+    { "temp_id": "t4", "type": "decision", "label": "2FA Enabled?" },
+    { "temp_id": "t5", "type": "process", "label": "Enter 2FA Code" },
+    { "temp_id": "t6", "type": "decision", "label": "2FA Valid?" },
+    { "temp_id": "t7", "type": "process", "label": "Grant Access" },
+    { "temp_id": "t8", "type": "process", "label": "Deny Access" },
+    { "temp_id": "t9", "type": "end", "label": "End" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "default", "label": "" },
+    { "from_temp_id": "t2", "to_temp_id": "t3", "type": "default", "label": "" },
+    { "from_temp_id": "t3", "to_temp_id": "t4", "type": "default", "label": "Yes" },
+    { "from_temp_id": "t3", "to_temp_id": "t8", "type": "default", "label": "No" },
+    { "from_temp_id": "t4", "to_temp_id": "t5", "type": "default", "label": "Yes" },
+    { "from_temp_id": "t4", "to_temp_id": "t7", "type": "default", "label": "No" },
+    { "from_temp_id": "t5", "to_temp_id": "t6", "type": "default", "label": "" },
+    { "from_temp_id": "t6", "to_temp_id": "t7", "type": "default", "label": "Yes" },
+    { "from_temp_id": "t6", "to_temp_id": "t8", "type": "default", "label": "No" },
+    { "from_temp_id": "t7", "to_temp_id": "t9", "type": "default", "label": "" },
+    { "from_temp_id": "t8", "to_temp_id": "t9", "type": "default", "label": "" }
+  ]
+}

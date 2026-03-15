@@ -1,0 +1,30 @@
+{
+  "name": "Project Planning",
+  "description": "Mind map for planning a project with key areas",
+  "chartType": "mindmap",
+  "nodes": [
+    { "temp_id": "t1", "type": "central_topic", "label": "Project Plan" },
+    { "temp_id": "t2", "type": "main_branch", "label": "Goals" },
+    { "temp_id": "t3", "type": "main_branch", "label": "Timeline" },
+    { "temp_id": "t4", "type": "main_branch", "label": "Resources" },
+    { "temp_id": "t5", "type": "main_branch", "label": "Risks" },
+    { "temp_id": "t6", "type": "sub_branch", "label": "Primary Goal" },
+    { "temp_id": "t7", "type": "sub_branch", "label": "Secondary Goal" },
+    { "temp_id": "t8", "type": "sub_branch", "label": "Phase 1" },
+    { "temp_id": "t9", "type": "sub_branch", "label": "Phase 2" },
+    { "temp_id": "t10", "type": "sub_branch", "label": "Team" },
+    { "temp_id": "t11", "type": "sub_branch", "label": "Budget" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "branch", "label": "" },
+    { "from_temp_id": "t1", "to_temp_id": "t3", "type": "branch", "label": "" },
+    { "from_temp_id": "t1", "to_temp_id": "t4", "type": "branch", "label": "" },
+    { "from_temp_id": "t1", "to_temp_id": "t5", "type": "branch", "label": "" },
+    { "from_temp_id": "t2", "to_temp_id": "t6", "type": "branch", "label": "" },
+    { "from_temp_id": "t2", "to_temp_id": "t7", "type": "branch", "label": "" },
+    { "from_temp_id": "t3", "to_temp_id": "t8", "type": "branch", "label": "" },
+    { "from_temp_id": "t3", "to_temp_id": "t9", "type": "branch", "label": "" },
+    { "from_temp_id": "t4", "to_temp_id": "t10", "type": "branch", "label": "" },
+    { "from_temp_id": "t4", "to_temp_id": "t11", "type": "branch", "label": "" }
+  ]
+}

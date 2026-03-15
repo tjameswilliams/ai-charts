@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import {
   ReactFlow,
   Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
   type Node,
@@ -26,12 +27,21 @@ import { FlowchartNode } from "./FlowchartNode";
 import { FlowchartEdge } from "./FlowchartEdge";
 import { FlowchartGroup } from "./FlowchartGroup";
 import { ERDNode, parseAttributes } from "./ERDNode";
+import { MindMapNode } from "./MindMapNode";
 import { ERDEdge } from "./ERDEdge";
 import { SwimlaneLane } from "./SwimlaneLane";
+import { SequenceActorNode } from "./SequenceActorNode";
+import { SequenceActivationNode } from "./SequenceActivationNode";
+import { SequenceEdge } from "./SequenceEdge";
 import { autoLayout } from "../../lib/autoLayout";
 import { api } from "../../api/client";
 import { SkeletonContext } from "./SkeletonContext";
 import { useChartTypeConfig } from "../../lib/chartTypeConfig";
+import { ShapePalette } from "./ShapePalette";
+import { InlineEditor } from "./InlineEditor";
+import { SearchOverlay } from "./SearchOverlay";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
+import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp";
 import type { ChartType } from "../../types";
 
 const EXPORT_PADDING = 50;
@@ -55,6 +65,7 @@ function CanvasPaneInner() {
   const deleteSelectedNodes = useStore((s) => s.deleteSelectedNodes);
   const deleteNode = useStore((s) => s.deleteNode);
   const deleteEdge = useStore((s) => s.deleteEdge);
+  const updateEdge = useStore((s) => s.updateEdge);
   const selectedEdgeId = useStore((s) => s.selectedEdgeId);
   const groups = useStore((s) => s.groups);
   const createGroup = useStore((s) => s.createGroup);
@@ -62,6 +73,11 @@ function CanvasPaneInner() {
   const setGroupNodes = useStore((s) => s.setGroupNodes);
   const selectedGroupId = useStore((s) => s.selectedGroupId);
   const selectGroup = useStore((s) => s.selectGroup);
+  const edgeRoutingMode = useStore((s) => s.edgeRoutingMode);
+  const setEdgeRoutingMode = useStore((s) => s.setEdgeRoutingMode);
+  const snapToGrid = useStore((s) => s.snapToGrid);
+  const gridSize = useStore((s) => s.gridSize);
+  const toggleSnapToGrid = useStore((s) => s.toggleSnapToGrid);
   const canUndo = useStore((s) => s.canUndo);
   const canRedo = useStore((s) => s.canRedo);
   const undoDesc = useStore((s) => s.undoDesc);
@@ -78,14 +94,17 @@ function CanvasPaneInner() {
     switch (chartType) {
       case "erd":       return { erd: ERDNode, group: FlowchartGroup } as Record<string, typeof FlowchartNode>;
       case "swimlane":  return { flowchart: FlowchartNode, group: SwimlaneLane } as Record<string, typeof FlowchartNode>;
+      case "mindmap":   return { mindmap: MindMapNode, group: FlowchartGroup } as Record<string, typeof FlowchartNode>;
+      case "sequence":  return { sequence_actor: SequenceActorNode, sequence_activation: SequenceActivationNode, flowchart: FlowchartNode, group: FlowchartGroup } as Record<string, typeof FlowchartNode>;
       default:          return { flowchart: FlowchartNode, group: FlowchartGroup } as Record<string, typeof FlowchartNode>;
     }
   }, [chartType]);
 
   const edgeTypes = useMemo(() => {
     switch (chartType) {
-      case "erd":  return { erd: ERDEdge } as Record<string, typeof FlowchartEdge>;
-      default:     return { flowchart: FlowchartEdge } as Record<string, typeof FlowchartEdge>;
+      case "erd":      return { erd: ERDEdge } as Record<string, typeof FlowchartEdge>;
+      case "sequence": return { sequence: SequenceEdge } as Record<string, typeof FlowchartEdge>;
+      default:         return { flowchart: FlowchartEdge } as Record<string, typeof FlowchartEdge>;
     }
   }, [chartType]);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -95,28 +114,16 @@ function CanvasPaneInner() {
   const [resizingNodeId, setResizingNodeId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [altHeld, setAltHeld] = useState(false);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [editingEdgeId, setEditingEdgeId] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; flowX: number; flowY: number; nodeId?: string } | null>(null);
 
   // Track Alt/Option key for selection mode
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Alt") setAltHeld(true);
-      if (e.key === "Escape") { setContextMenu(null); setResizingNodeId(null); }
-      // Delete/Backspace to remove selected nodes or edges
-      if (e.key === "Delete" || e.key === "Backspace") {
-        // Don't delete if user is typing in an input
-        const tag = (e.target as HTMLElement).tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-        if (selectedNodeIds.size > 0) {
-          e.preventDefault();
-          deleteSelectedNodes();
-        } else if (selectedNodeId) {
-          e.preventDefault();
-          deleteNode(selectedNodeId);
-        } else if (selectedEdgeId) {
-          e.preventDefault();
-          deleteEdge(selectedEdgeId);
-        }
-      }
     };
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key === "Alt") setAltHeld(false);
@@ -132,7 +139,35 @@ function CanvasPaneInner() {
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
     };
-  }, [selectedNodeIds, selectedNodeId, selectedEdgeId, deleteSelectedNodes, deleteNode, deleteEdge]);
+  }, []);
+
+  // Keyboard shortcuts (delete, nudge, search, select all, etc.)
+  const copySelection = useStore((s) => s.copySelection);
+  const pasteClipboard = useStore((s) => s.pasteClipboard);
+  const duplicateSelection = useStore((s) => s.duplicateSelection);
+
+  useKeyboardShortcuts({
+    selectedNodeId,
+    selectedEdgeId,
+    selectedNodeIds,
+    nodes: storeNodes,
+    gridSize,
+    batchUpdatePositions,
+    selectNode,
+    selectEdge,
+    setSelectedNodeIds,
+    deleteNode,
+    deleteEdge,
+    deleteSelectedNodes,
+    setEditingNodeId,
+    setSearchOpen,
+    setShortcutsHelpOpen,
+    setContextMenu: setContextMenu as (menu: null) => void,
+    fitView,
+    copySelection,
+    pasteClipboard,
+    duplicateSelection,
+  });
 
   // Track ReactFlow selection changes (filter out group nodes)
   const onSelectionChange = useCallback(
@@ -365,7 +400,11 @@ function CanvasPaneInner() {
       const nodeStyle: React.CSSProperties = {};
       if (parsed.width) nodeStyle.width = parsed.width;
       if (parsed.height) nodeStyle.height = parsed.height;
-      const rfNodeType = chartType === "erd" ? "erd" : "flowchart";
+      let rfNodeType: string;
+      if (chartType === "erd") rfNodeType = "erd";
+      else if (chartType === "sequence" && (node.type === "actor" || node.type === "participant")) rfNodeType = "sequence_actor";
+      else if (chartType === "sequence" && node.type === "lifeline_activation") rfNodeType = "sequence_activation";
+      else rfNodeType = chartType === "mindmap" ? "mindmap" : "flowchart";
       return {
         id: node.id,
         type: rfNodeType as "flowchart",
@@ -451,7 +490,7 @@ function CanvasPaneInner() {
   const flowEdges: Edge[] = useMemo(
     () =>
       edges.map((edge) => {
-        const rfEdgeType = chartType === "erd" ? "erd" : "flowchart";
+        const rfEdgeType = chartType === "erd" ? "erd" : chartType === "sequence" ? "sequence" : "flowchart";
         // For ERD edges, parse condition field for attribute-level handle targeting
         let sourceHandle: string | undefined;
         let targetHandle: string | undefined;
@@ -476,14 +515,14 @@ function CanvasPaneInner() {
           source: edge.fromNodeId,
           target: edge.toNodeId,
           type: rfEdgeType,
-          data: { edge },
+          data: { edge, routingMode: edgeRoutingMode },
           ...(sourceHandle ? { sourceHandle } : {}),
           ...(targetHandle ? { targetHandle } : {}),
           ...(chartType !== "erd" ? { markerEnd: { type: MarkerType.ArrowClosed, color: "#71717a" } } : {}),
           style: { stroke: chartType === "erd" ? "#38bdf8" : "#71717a", strokeWidth: 2 },
         };
       }),
-    [edges, chartType, nodeAttrMap]
+    [edges, chartType, nodeAttrMap, edgeRoutingMode]
   );
 
   const onNodeClick = useCallback(
@@ -504,6 +543,22 @@ function CanvasPaneInner() {
       setResizingNodeId(null);
     },
     [selectEdge]
+  );
+
+  const onNodeDoubleClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      if (!node.id.startsWith("group-")) {
+        setEditingNodeId(node.id);
+      }
+    },
+    []
+  );
+
+  const onEdgeDoubleClick = useCallback(
+    (_: React.MouseEvent, edge: Edge) => {
+      setEditingEdgeId(edge.id);
+    },
+    []
   );
 
   const onPaneClick = useCallback(() => {
@@ -676,9 +731,6 @@ function CanvasPaneInner() {
     [deleteEdge]
   );
 
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; flowX: number; flowY: number; nodeId?: string } | null>(null);
-
   const handleContextMenu = useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
@@ -776,8 +828,35 @@ function CanvasPaneInner() {
     e.target.value = "";
   }, [activeChart, createNode]);
 
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      const raw = e.dataTransfer.getData("application/reactflow");
+      if (!raw) return;
+      try {
+        const { type, label } = JSON.parse(raw);
+        const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        createNode({
+          type: type as never,
+          label,
+          positionX: position.x,
+          positionY: position.y,
+        });
+      } catch {
+        // Invalid data — ignore
+      }
+    },
+    [screenToFlowPosition, createNode]
+  );
+
   return (
-    <div className="h-full w-full relative" onContextMenu={handleContextMenu} onClick={() => setContextMenu(null)}>
+    <div className="h-full w-full relative" onContextMenu={handleContextMenu} onClick={() => setContextMenu(null)} onDragOver={onDragOver} onDrop={onDrop}>
+      <ShapePalette />
       {/* Selection toolbar */}
       {selectedNodeIds.size > 0 && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-zinc-800/95 backdrop-blur border border-zinc-700 rounded-lg px-3 py-1.5">
@@ -795,6 +874,18 @@ function CanvasPaneInner() {
               Group
             </button>
           )}
+          <button
+            onClick={() => copySelection()}
+            className="text-xs text-zinc-300 hover:text-zinc-100 bg-zinc-700/50 hover:bg-zinc-700 px-2 py-0.5 rounded transition-colors"
+          >
+            Copy
+          </button>
+          <button
+            onClick={() => duplicateSelection()}
+            className="text-xs text-zinc-300 hover:text-zinc-100 bg-zinc-700/50 hover:bg-zinc-700 px-2 py-0.5 rounded transition-colors"
+          >
+            Duplicate
+          </button>
           <button
             onClick={() => deleteSelectedNodes()}
             className="text-xs text-red-400 hover:text-red-300 bg-red-900/30 hover:bg-red-900/50 px-2 py-0.5 rounded transition-colors"
@@ -907,6 +998,46 @@ function CanvasPaneInner() {
           className="hidden"
           onChange={handleImageUpload}
         />
+        <div className="w-px h-5 bg-zinc-700 mx-0.5" />
+        <button
+          onClick={() => setEdgeRoutingMode("bezier")}
+          title="Bezier edges"
+          className={`bg-zinc-800/90 backdrop-blur border border-zinc-700 rounded-lg p-1.5 transition-colors ${edgeRoutingMode === "bezier" ? "text-blue-400 bg-blue-900/30" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700"}`}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 17C3 17 9 3 21 3" />
+          </svg>
+        </button>
+        <button
+          onClick={() => setEdgeRoutingMode("straight")}
+          title="Straight edges"
+          className={`bg-zinc-800/90 backdrop-blur border border-zinc-700 rounded-lg p-1.5 transition-colors ${edgeRoutingMode === "straight" ? "text-blue-400 bg-blue-900/30" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700"}`}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="21" x2="21" y2="3" />
+          </svg>
+        </button>
+        <button
+          onClick={() => setEdgeRoutingMode("orthogonal")}
+          title="Orthogonal edges"
+          className={`bg-zinc-800/90 backdrop-blur border border-zinc-700 rounded-lg p-1.5 transition-colors ${edgeRoutingMode === "orthogonal" ? "text-blue-400 bg-blue-900/30" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700"}`}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3,21 3,3 21,3" />
+          </svg>
+        </button>
+        <button
+          onClick={toggleSnapToGrid}
+          title={snapToGrid ? "Disable snap to grid" : "Enable snap to grid"}
+          className={`bg-zinc-800/90 backdrop-blur border border-zinc-700 rounded-lg p-1.5 transition-colors ${snapToGrid ? "text-blue-400 bg-blue-900/30" : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700"}`}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+          </svg>
+        </button>
       </div>
 
       {!activeChart ? (
@@ -924,6 +1055,8 @@ function CanvasPaneInner() {
             onEdgesChange={onEdgesChange}
             onNodeClick={onNodeClick}
             onEdgeClick={onEdgeClick}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onEdgeDoubleClick={onEdgeDoubleClick}
             onPaneClick={onPaneClick}
             onNodeDragStart={onNodeDragStart}
             onNodeDragStop={onNodeDragStop}
@@ -937,13 +1070,20 @@ function CanvasPaneInner() {
             panOnDrag={!altHeld}
             multiSelectionKeyCode="Shift"
             deleteKeyCode={null}
+            snapToGrid={snapToGrid}
+            snapGrid={[gridSize, gridSize]}
             minZoom={0.05}
             maxZoom={2}
             fitView
             proOptions={{ hideAttribution: true }}
             className="bg-zinc-950"
           >
-            <Background color="#27272a" gap={20} />
+            <Background
+              color={snapToGrid ? "#3f3f46" : "#27272a"}
+              gap={snapToGrid ? gridSize : 20}
+              variant={snapToGrid ? BackgroundVariant.Lines : BackgroundVariant.Dots}
+              lineWidth={snapToGrid ? 0.5 : undefined}
+            />
             <Controls className="!bg-zinc-800 !border-zinc-700 !rounded-lg [&>button]:!bg-zinc-800 [&>button]:!border-zinc-700 [&>button]:!text-zinc-300 [&>button:hover]:!bg-zinc-700" />
             <MiniMap
               className="!bg-zinc-900 !border-zinc-800"
@@ -1046,6 +1186,61 @@ function CanvasPaneInner() {
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-blue-900/80 backdrop-blur border border-blue-700 rounded-lg px-3 py-1.5 pointer-events-none">
           <span className="text-xs text-blue-200">Drag to select nodes</span>
         </div>
+      )}
+
+      {/* Inline editor for node label */}
+      {editingNodeId && (() => {
+        const node = storeNodes.find((n) => n.id === editingNodeId);
+        if (!node) return null;
+        return (
+          <InlineEditor
+            position={{ x: node.positionX + 80, y: node.positionY + 20 }}
+            initialValue={node.label}
+            onSave={(value) => {
+              updateNode(editingNodeId, { label: value });
+              setEditingNodeId(null);
+            }}
+            onCancel={() => setEditingNodeId(null)}
+          />
+        );
+      })()}
+
+      {/* Inline editor for edge label */}
+      {editingEdgeId && (() => {
+        const edge = edges.find((e) => e.id === editingEdgeId);
+        if (!edge) return null;
+        const fromNode = storeNodes.find((n) => n.id === edge.fromNodeId);
+        const toNode = storeNodes.find((n) => n.id === edge.toNodeId);
+        const midX = fromNode && toNode ? (fromNode.positionX + toNode.positionX) / 2 + 80 : 200;
+        const midY = fromNode && toNode ? (fromNode.positionY + toNode.positionY) / 2 + 30 : 200;
+        return (
+          <InlineEditor
+            position={{ x: midX, y: midY }}
+            initialValue={edge.label}
+            onSave={(value) => {
+              updateEdge(editingEdgeId, { label: value });
+              setEditingEdgeId(null);
+            }}
+            onCancel={() => setEditingEdgeId(null)}
+          />
+        );
+      })()}
+
+      {/* Search overlay */}
+      {searchOpen && (
+        <SearchOverlay
+          nodes={storeNodes}
+          onSelect={(nodeId) => {
+            selectNode(nodeId);
+            fitView({ nodes: [{ id: nodeId }], duration: 200 });
+          }}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
+
+      {/* Keyboard shortcuts help */}
+      {shortcutsHelpOpen && (
+        <KeyboardShortcutsHelp onClose={() => setShortcutsHelpOpen(false)} />
       )}
     </div>
   );

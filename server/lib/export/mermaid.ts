@@ -13,6 +13,13 @@ const nodeShapes: Record<string, [string, string]> = {
   subflow_ref: ["[[", "]]"],
   entity: ["[", "]"],
   action: ["[", "]"],
+  central_topic: ["((", "))"],
+  main_branch: ["(", ")"],
+  sub_branch: ["[", "]"],
+  leaf: ["[", "]"],
+  actor: ["[", "]"],
+  participant: ["[", "]"],
+  lifeline_activation: ["[", "]"],
 };
 
 function escapeLabel(label: string): string {
@@ -44,8 +51,16 @@ export async function exportMermaid(chartId: string): Promise<string> {
 
   const chartType = chart?.chartType || "flowchart";
 
+  if (chartType === "sequence") {
+    return exportMermaidSequence(nodeRows, edgeRows);
+  }
+
   if (chartType === "erd") {
     return exportMermaidERD(nodeRows, edgeRows);
+  }
+
+  if (chartType === "mindmap") {
+    return exportMermaidMindMap(nodeRows, edgeRows);
   }
 
   // Build group membership
@@ -163,6 +178,84 @@ function exportMermaidERD(
     else if (edge.type === "many_to_many") rel = "}o--o{";
     const label = edge.label ? ` : "${escapeLabel(edge.label)}"` : " : relates";
     lines.push(`  ${fromName} ${rel} ${toName}${label}`);
+  }
+
+  return lines.join("\n");
+}
+
+function exportMermaidMindMap(
+  nodeRows: Array<{ id: string; type: string | null; label: string; description: string | null }>,
+  edgeRows: Array<{ id: string; fromNodeId: string; toNodeId: string; type: string | null; label: string | null }>
+): string {
+  const lines: string[] = ["mindmap"];
+
+  // Find central topic
+  const central = nodeRows.find((n) => n.type === "central_topic") || nodeRows[0];
+  if (!central) return "mindmap\n  root(Empty)";
+
+  // Build tree structure
+  const children = new Map<string, string[]>();
+  for (const n of nodeRows) children.set(n.id, []);
+  for (const edge of edgeRows) {
+    children.get(edge.fromNodeId)?.push(edge.toNodeId);
+  }
+
+  lines.push(`  root(${escapeLabel(central.label)})`);
+
+  function addChildren(parentId: string, indent: number) {
+    const kids = children.get(parentId) || [];
+    for (const kidId of kids) {
+      const node = nodeRows.find((n) => n.id === kidId);
+      if (!node) continue;
+      const pad = " ".repeat(indent);
+      lines.push(`${pad}${escapeLabel(node.label)}`);
+      addChildren(kidId, indent + 2);
+    }
+  }
+
+  addChildren(central.id, 4);
+
+  return lines.join("\n");
+}
+
+function exportMermaidSequence(
+  nodeRows: Array<{ id: string; type: string | null; label: string; description: string | null }>,
+  edgeRows: Array<{ id: string; fromNodeId: string; toNodeId: string; type: string | null; label: string | null; createdAt: string }>
+): string {
+  const lines: string[] = ["sequenceDiagram"];
+  const nodeMap = new Map(nodeRows.map((n) => [n.id, n]));
+
+  // Declare participants
+  for (const node of nodeRows) {
+    if (node.type === "actor") {
+      lines.push(`  actor ${escapeLabel(node.label)}`);
+    } else if (node.type === "participant") {
+      lines.push(`  participant ${escapeLabel(node.label)}`);
+    }
+  }
+
+  // Sort edges by created_at
+  const sorted = [...edgeRows].sort((a, b) => {
+    return a.createdAt.localeCompare(b.createdAt);
+  });
+
+  // Messages
+  for (const edge of sorted) {
+    const from = nodeMap.get(edge.fromNodeId);
+    const to = nodeMap.get(edge.toNodeId);
+    if (!from || !to) continue;
+    // Skip non-actor/participant nodes
+    if (from.type !== "actor" && from.type !== "participant") continue;
+    if (to.type !== "actor" && to.type !== "participant") continue;
+
+    let arrow = "->>";
+    if (edge.type === "sync_message") arrow = "->>";
+    else if (edge.type === "async_message") arrow = "-->>";
+    else if (edge.type === "return_message") arrow = "-->>";
+    else if (edge.type === "self_message") arrow = "->>";
+
+    const label = edge.label || "";
+    lines.push(`  ${escapeLabel(from.label)}${arrow}${escapeLabel(to.label)}: ${label}`);
   }
 
   return lines.join("\n");

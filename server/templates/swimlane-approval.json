@@ -1,0 +1,33 @@
+{
+  "name": "Approval Process",
+  "description": "Multi-step approval workflow across Requester, Manager, and HR lanes",
+  "chartType": "swimlane",
+  "nodes": [
+    { "temp_id": "t1", "type": "start", "label": "Start" },
+    { "temp_id": "t2", "type": "process", "label": "Submit Request" },
+    { "temp_id": "t3", "type": "process", "label": "Review Request" },
+    { "temp_id": "t4", "type": "decision", "label": "Approved?" },
+    { "temp_id": "t5", "type": "process", "label": "HR Review" },
+    { "temp_id": "t6", "type": "decision", "label": "HR Approved?" },
+    { "temp_id": "t7", "type": "process", "label": "Finalize" },
+    { "temp_id": "t8", "type": "process", "label": "Rejected" },
+    { "temp_id": "t9", "type": "end", "label": "End" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "default", "label": "" },
+    { "from_temp_id": "t2", "to_temp_id": "t3", "type": "default", "label": "" },
+    { "from_temp_id": "t3", "to_temp_id": "t4", "type": "default", "label": "" },
+    { "from_temp_id": "t4", "to_temp_id": "t5", "type": "default", "label": "Yes" },
+    { "from_temp_id": "t4", "to_temp_id": "t8", "type": "default", "label": "No" },
+    { "from_temp_id": "t5", "to_temp_id": "t6", "type": "default", "label": "" },
+    { "from_temp_id": "t6", "to_temp_id": "t7", "type": "default", "label": "Yes" },
+    { "from_temp_id": "t6", "to_temp_id": "t8", "type": "default", "label": "No" },
+    { "from_temp_id": "t7", "to_temp_id": "t9", "type": "default", "label": "" },
+    { "from_temp_id": "t8", "to_temp_id": "t9", "type": "default", "label": "" }
+  ],
+  "groups": [
+    { "label": "Requester", "node_temp_ids": ["t1", "t2", "t9"], "color": "#3b82f6" },
+    { "label": "Manager", "node_temp_ids": ["t3", "t4", "t8"], "color": "#f59e0b" },
+    { "label": "HR", "node_temp_ids": ["t5", "t6", "t7"], "color": "#10b981" }
+  ]
+}

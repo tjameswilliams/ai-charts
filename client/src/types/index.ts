@@ -6,7 +6,7 @@ export interface Project {
   updatedAt: string;
 }
 
-export type ChartType = "flowchart" | "erd" | "swimlane";
+export type ChartType = "flowchart" | "erd" | "swimlane" | "mindmap" | "sequence";
 
 export interface Chart {
   id: string;
@@ -16,6 +16,7 @@ export interface Chart {
   audience: string;
   chartType: ChartType;
   status: "draft" | "review" | "final";
+  settingsJson?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,7 +33,15 @@ export type NodeType =
   | "subflow_ref"
   | "image"
   | "entity"    // ERD
-  | "action";   // Swimlane
+  | "action"    // Swimlane
+  | "central_topic"  // Mind Map
+  | "main_branch"    // Mind Map
+  | "sub_branch"     // Mind Map
+  | "leaf"           // Mind Map
+  | "actor"               // Sequence
+  | "participant"         // Sequence
+  | "lifeline_activation" // Sequence
+  | "sticky_note";
 
 export interface FlowNode {
   id: string;
@@ -51,7 +60,9 @@ export interface FlowNode {
 
 export type EdgeType =
   | "default" | "conditional" | "error" | "async" | "fallback"
-  | "one_to_one" | "one_to_many" | "many_to_many";  // ERD
+  | "one_to_one" | "one_to_many" | "many_to_many"  // ERD
+  | "branch"  // Mind Map
+  | "sync_message" | "async_message" | "return_message" | "self_message";  // Sequence
 
 export interface FlowEdge {
   id: string;
@@ -63,6 +74,7 @@ export interface FlowEdge {
   condition: string;
   sourceRefId: string | null;
   confidence: number;
+  orderIndex?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -168,8 +168,11 @@ CREATE TABLE IF NOT EXISTS source_materials (
 );
   `,
 
-  // ── Migration 2: Example for future use ──
-  // `ALTER TABLE projects ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;`,
+  // ── Migration 2: Chart settings for connector routing ──
+  `ALTER TABLE charts ADD COLUMN settings_json TEXT DEFAULT '{}';`,
+
+  // ── Migration 3: Sequence diagram support ──
+  `ALTER TABLE edges ADD COLUMN order_index INTEGER;`,
 ];
 
 /**

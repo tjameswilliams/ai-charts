@@ -83,6 +83,20 @@ RULES:
 - Use node types: start, end, decision, action, process.
 - Groups represent lanes (actors/roles/departments). Create a group for each lane.
 - Use group_nodes to assign nodes to their respective lanes.`;
+  } else if (ct === "mindmap") {
+    prompt += `\n\nCHART TYPE: Mind Map
+- You are building a Mind Map. Use central_topic for the main idea, main_branch for primary categories, sub_branch for secondary topics, and leaf for details.
+- Connect all nodes with branch edges radiating outward from the central topic.
+- Every mind map MUST have exactly one central_topic node at the center.
+- Do NOT use start/end/process/decision nodes — only central_topic, main_branch, sub_branch, leaf, and sticky_note.
+- Structure: central_topic → main_branch → sub_branch → leaf.`;
+  } else if (ct === "sequence") {
+    prompt += `\n\nCHART TYPE: Sequence Diagram
+- You are building a Sequence Diagram. Use actor for people/roles and participant for systems/services.
+- Connect them with sync_message, async_message, return_message, or self_message edges.
+- Include order_index on edges to control message ordering.
+- Do NOT use start/end/process/decision nodes — only actor, participant, lifeline_activation, and sticky_note.
+- Structure: actors/participants at the top, messages flow between them in order.`;
   } else {
     prompt += `\n\nCHART TYPE: Flowchart
 - Use appropriate node types: start (green pill), end (red pill), process (blue rect), decision (amber diamond), input_output (purple parallelogram), data_store (teal cylinder), external_system (orange double-border), note (gray dashed), subflow_ref (indigo nested).

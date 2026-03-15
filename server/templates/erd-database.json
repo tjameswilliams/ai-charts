@@ -1,0 +1,15 @@
+{
+  "name": "Basic Database Schema",
+  "description": "User, Post, and Comment entities with relationships",
+  "chartType": "erd",
+  "nodes": [
+    { "temp_id": "t1", "type": "entity", "label": "User", "description": "id: UUID PK\nusername: VARCHAR\nemail: VARCHAR\ncreated_at: TIMESTAMP" },
+    { "temp_id": "t2", "type": "entity", "label": "Post", "description": "id: UUID PK\ntitle: VARCHAR\nbody: TEXT\nuser_id: UUID FK\ncreated_at: TIMESTAMP" },
+    { "temp_id": "t3", "type": "entity", "label": "Comment", "description": "id: UUID PK\nbody: TEXT\nuser_id: UUID FK\npost_id: UUID FK\ncreated_at: TIMESTAMP" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "one-to-many", "label": "has many" },
+    { "from_temp_id": "t1", "to_temp_id": "t3", "type": "one-to-many", "label": "has many" },
+    { "from_temp_id": "t2", "to_temp_id": "t3", "type": "one-to-many", "label": "has many" }
+  ]
+}

@@ -1,5 +1,7 @@
 import ELK from "elkjs/lib/elk.bundled.js";
 import type { FlowNode, FlowEdge, FlowGroup, ChartType } from "../types";
+import { mindmapLayout } from "./mindmapLayout";
+import { sequenceLayout } from "./sequenceLayout";
 
 const elk = new ELK();
 
@@ -44,6 +46,12 @@ export async function autoLayout(
   chartType: ChartType = "flowchart",
   groups: FlowGroup[] = [],
 ): Promise<LayoutResult> {
+  if (chartType === "mindmap") {
+    return mindmapLayout(nodes, edges);
+  }
+  if (chartType === "sequence") {
+    return sequenceLayout(nodes, edges);
+  }
   if (chartType === "swimlane" && groups.length > 0) {
     return swimlaneLayout(nodes, edges, groups);
   }

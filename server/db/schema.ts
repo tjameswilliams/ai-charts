@@ -22,6 +22,7 @@ export const charts = sqliteTable("charts", {
   })
     .notNull()
     .default("draft"),
+  settingsJson: text("settings_json").default("{}"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });
@@ -45,6 +46,14 @@ export const nodes = sqliteTable("nodes", {
       "image",
       "entity",
       "action",
+      "central_topic",
+      "main_branch",
+      "sub_branch",
+      "leaf",
+      "actor",
+      "participant",
+      "lifeline_activation",
+      "sticky_note",
     ],
   })
     .notNull()
@@ -74,7 +83,7 @@ export const edges = sqliteTable("edges", {
     .notNull()
     .references(() => nodes.id, { onDelete: "cascade" }),
   type: text("type", {
-    enum: ["default", "conditional", "error", "async", "fallback", "one_to_one", "one_to_many", "many_to_many"],
+    enum: ["default", "conditional", "error", "async", "fallback", "one_to_one", "one_to_many", "many_to_many", "branch", "sync_message", "async_message", "return_message", "self_message"],
   })
     .notNull()
     .default("default"),
@@ -84,6 +93,7 @@ export const edges = sqliteTable("edges", {
     onDelete: "set null",
   }),
   confidence: real("confidence").default(1.0),
+  orderIndex: integer("order_index"),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 });

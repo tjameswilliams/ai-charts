@@ -27,6 +27,14 @@ const nodeStyles: Record<
   image: { bg: "bg-zinc-900/60", border: "border-zinc-600", text: "text-zinc-200", descText: "text-zinc-400" },
   entity: { bg: "bg-sky-900/60", border: "border-sky-500", text: "text-sky-100", descText: "text-sky-300/70" },
   action: { bg: "bg-cyan-900/60", border: "border-cyan-500", text: "text-cyan-100", descText: "text-cyan-300/70" },
+  sticky_note: { bg: "bg-yellow-200/90", border: "border-yellow-400", text: "text-yellow-900", descText: "text-yellow-800/70" },
+  actor: { bg: "bg-zinc-700/80", border: "border-zinc-400", text: "text-zinc-100", descText: "text-zinc-400" },
+  participant: { bg: "bg-zinc-800/80", border: "border-zinc-500", text: "text-zinc-200", descText: "text-zinc-400" },
+  lifeline_activation: { bg: "bg-blue-900/50", border: "border-blue-500", text: "text-blue-200", descText: "text-blue-400" },
+  central_topic: { bg: "bg-violet-600/90", border: "border-violet-400", text: "text-violet-50", descText: "text-violet-200/70" },
+  main_branch: { bg: "bg-blue-700/80", border: "border-blue-400", text: "text-blue-50", descText: "text-blue-200/70" },
+  sub_branch: { bg: "bg-emerald-800/70", border: "border-emerald-500", text: "text-emerald-100", descText: "text-emerald-300/70" },
+  leaf: { bg: "bg-zinc-800/70", border: "border-zinc-600", text: "text-zinc-200", descText: "text-zinc-400" },
 };
 
 // Skeleton overlay that covers the content area
@@ -89,6 +97,10 @@ const textColorMap: Record<string, string> = {
   "text-zinc-200": "#e4e4e7",
   "text-sky-100": "#e0f2fe",
   "text-cyan-100": "#cffafe",
+  "text-yellow-900": "#713f12",
+  "text-violet-50": "#f5f3ff",
+  "text-blue-50": "#eff6ff",
+  "text-zinc-100": "#f4f4f5",
 };
 
 export const FlowchartNode = memo(function FlowchartNode({ data }: NodeProps) {

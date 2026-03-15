@@ -40,6 +40,14 @@ export async function exportMarkdown(chartId: string): Promise<string> {
     return exportMarkdownERD(lines, nodeRows, edgeRows);
   }
 
+  if (chartType === "mindmap") {
+    return exportMarkdownMindMap(lines, nodeRows, edgeRows);
+  }
+
+  if (chartType === "sequence") {
+    return exportMarkdownSequence(lines, nodeRows, edgeRows);
+  }
+
   if (chartType === "swimlane") {
     return exportMarkdownSwimlane(lines, nodeRows, edgeRows, groupRows, issues);
   }
@@ -217,6 +225,92 @@ function exportMarkdownSwimlane(
     for (const issue of issues) {
       const icon = issue.type === "error" ? "X" : "!";
       lines.push(`- [${icon}] ${issue.message}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function exportMarkdownMindMap(
+  lines: string[],
+  nodeRows: Array<{ id: string; type: string | null; label: string; description: string | null }>,
+  edgeRows: Array<{ id: string; fromNodeId: string; toNodeId: string; type: string | null; label: string | null }>
+): string {
+  const central = nodeRows.find((n) => n.type === "central_topic");
+  const nodeMap = new Map(nodeRows.map((n) => [n.id, n]));
+
+  // Build tree
+  const children = new Map<string, string[]>();
+  for (const n of nodeRows) children.set(n.id, []);
+  for (const edge of edgeRows) {
+    children.get(edge.fromNodeId)?.push(edge.toNodeId);
+  }
+
+  if (central) {
+    lines.push(`\n## Central Topic: ${central.label}`);
+    if (central.description) lines.push(central.description);
+
+    function addBranches(parentId: string, depth: number) {
+      const kids = children.get(parentId) || [];
+      for (const kidId of kids) {
+        const node = nodeMap.get(kidId);
+        if (!node) continue;
+        const indent = "  ".repeat(depth);
+        if (depth === 0) {
+          lines.push(`\n### ${node.label}`);
+        } else {
+          lines.push(`${indent}- **${node.label}**${node.description ? `: ${node.description}` : ""}`);
+        }
+        addBranches(kidId, depth + 1);
+      }
+    }
+
+    addBranches(central.id, 0);
+  } else {
+    lines.push(`\n## Topics`);
+    for (const node of nodeRows) {
+      lines.push(`- **${node.label}**${node.description ? `: ${node.description}` : ""}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function exportMarkdownSequence(
+  lines: string[],
+  nodeRows: Array<{ id: string; type: string | null; label: string; description: string | null }>,
+  edgeRows: Array<{ id: string; fromNodeId: string; toNodeId: string; type: string | null; label: string | null; createdAt: string }>
+): string {
+  const nodeMap = new Map(nodeRows.map((n) => [n.id, n]));
+
+  const actors = nodeRows.filter((n) => n.type === "actor");
+  const participants = nodeRows.filter((n) => n.type === "participant");
+
+  if (actors.length > 0) {
+    lines.push(`\n## Actors`);
+    for (const a of actors) {
+      lines.push(`- **${a.label}**${a.description ? `: ${a.description}` : ""}`);
+    }
+  }
+
+  if (participants.length > 0) {
+    lines.push(`\n## Participants`);
+    for (const p of participants) {
+      lines.push(`- **${p.label}**${p.description ? `: ${p.description}` : ""}`);
+    }
+  }
+
+  if (edgeRows.length > 0) {
+    lines.push(`\n## Messages`);
+    const sorted = [...edgeRows].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    let step = 1;
+    for (const edge of sorted) {
+      const from = nodeMap.get(edge.fromNodeId);
+      const to = nodeMap.get(edge.toNodeId);
+      if (!from || !to) continue;
+      const typeLabel = edge.type ? ` [${edge.type.replace(/_/g, " ")}]` : "";
+      lines.push(`${step}. **${from.label}** → **${to.label}**${typeLabel}${edge.label ? `: ${edge.label}` : ""}`);
+      step++;
     }
   }
 

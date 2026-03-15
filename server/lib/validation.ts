@@ -36,6 +36,16 @@ export async function validateChart(chartId: string): Promise<ValidationIssue[]>
   const nodeIds = new Set(nodeRows.map((n) => n.id));
   const nodeMap = new Map(nodeRows.map((n) => [n.id, n]));
 
+  // Sequence diagram validation
+  if (chartType === "sequence") {
+    return validateSequence(issues, nodeRows, edgeRows, nodeMap);
+  }
+
+  // Mind map-specific validation
+  if (chartType === "mindmap") {
+    return validateMindMap(issues, nodeRows, edgeRows, nodeMap);
+  }
+
   // ERD-specific validation
   if (chartType === "erd") {
     return validateERD(issues, nodeRows, edgeRows, nodeMap);
@@ -197,6 +207,40 @@ export async function validateChart(chartId: string): Promise<ValidationIssue[]>
   return issues;
 }
 
+function validateSequence(
+  issues: ValidationIssue[],
+  nodeRows: Array<{ id: string; type: string | null; label: string; description: string | null; confidence: number | null }>,
+  edgeRows: Array<{ id: string; fromNodeId: string; toNodeId: string; type: string | null; label: string | null }>,
+  nodeMap: Map<string, typeof nodeRows[0]>
+): ValidationIssue[] {
+  const actors = nodeRows.filter((n) => n.type === "actor" || n.type === "participant");
+  if (actors.length === 0) {
+    issues.push({ type: "error", code: "no_actors", message: "Sequence diagram must have at least one actor or participant" });
+  }
+
+  // Check messages connect valid actors/participants
+  const actorIds = new Set(actors.map((a) => a.id));
+  for (const edge of edgeRows) {
+    if (!actorIds.has(edge.fromNodeId) && !actorIds.has(edge.toNodeId)) {
+      issues.push({
+        type: "warning",
+        code: "invalid_message",
+        message: `Message "${edge.label || "unnamed"}" doesn't connect to any actor/participant`,
+        edgeId: edge.id,
+      });
+    }
+  }
+
+  // Empty labels
+  for (const node of nodeRows) {
+    if (!node.label.trim()) {
+      issues.push({ type: "warning", code: "empty_label", message: "Node has empty label", nodeId: node.id });
+    }
+  }
+
+  return issues;
+}
+
 function validateERD(
   issues: ValidationIssue[],
   nodeRows: Array<{ id: string; type: string | null; label: string; description: string | null; confidence: number | null }>,
@@ -235,6 +279,36 @@ function validateERD(
       const from = nodeMap.get(edge.fromNodeId);
       const to = nodeMap.get(edge.toNodeId);
       issues.push({ type: "warning", code: "missing_rel_label", message: `Relationship between "${from?.label || "?"}" and "${to?.label || "?"}" has no label`, edgeId: edge.id });
+    }
+  }
+
+  return issues;
+}
+
+function validateMindMap(
+  issues: ValidationIssue[],
+  nodeRows: Array<{ id: string; type: string | null; label: string; description: string | null; confidence: number | null }>,
+  edgeRows: Array<{ id: string; fromNodeId: string; toNodeId: string; type: string | null; label: string | null }>,
+  nodeMap: Map<string, typeof nodeRows[0]>
+): ValidationIssue[] {
+  // Must have central_topic
+  const centralTopics = nodeRows.filter((n) => n.type === "central_topic");
+  if (centralTopics.length === 0) {
+    issues.push({ type: "error", code: "no_central_topic", message: "Mind map must have a central topic node" });
+  }
+  if (centralTopics.length > 1) {
+    issues.push({ type: "warning", code: "multiple_central", message: "Mind map has multiple central topics" });
+  }
+
+  // Check for disconnected nodes
+  const connected = new Set<string>();
+  for (const edge of edgeRows) {
+    connected.add(edge.fromNodeId);
+    connected.add(edge.toNodeId);
+  }
+  for (const node of nodeRows) {
+    if (!connected.has(node.id) && nodeRows.length > 1) {
+      issues.push({ type: "warning", code: "disconnected", message: `"${node.label}" is not connected to the mind map`, nodeId: node.id });
     }
   }
 

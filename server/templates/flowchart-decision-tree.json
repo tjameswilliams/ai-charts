@@ -1,0 +1,19 @@
+{
+  "name": "Decision Tree",
+  "description": "Simple decision tree for new vs returning user routing",
+  "chartType": "flowchart",
+  "nodes": [
+    { "temp_id": "t1", "type": "start", "label": "Start" },
+    { "temp_id": "t2", "type": "decision", "label": "Is User New?" },
+    { "temp_id": "t3", "type": "process", "label": "Onboarding" },
+    { "temp_id": "t4", "type": "process", "label": "Dashboard" },
+    { "temp_id": "t5", "type": "end", "label": "End" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "default", "label": "" },
+    { "from_temp_id": "t2", "to_temp_id": "t3", "type": "default", "label": "Yes" },
+    { "from_temp_id": "t2", "to_temp_id": "t4", "type": "default", "label": "No" },
+    { "from_temp_id": "t3", "to_temp_id": "t5", "type": "default", "label": "" },
+    { "from_temp_id": "t4", "to_temp_id": "t5", "type": "default", "label": "" }
+  ]
+}

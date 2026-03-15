@@ -1,0 +1,22 @@
+{
+  "name": "Brainstorming Session",
+  "description": "Open-ended brainstorming mind map with categories",
+  "chartType": "mindmap",
+  "nodes": [
+    { "temp_id": "t1", "type": "central_topic", "label": "Topic" },
+    { "temp_id": "t2", "type": "main_branch", "label": "What?" },
+    { "temp_id": "t3", "type": "main_branch", "label": "Why?" },
+    { "temp_id": "t4", "type": "main_branch", "label": "How?" },
+    { "temp_id": "t5", "type": "main_branch", "label": "Who?" },
+    { "temp_id": "t6", "type": "leaf", "label": "Idea 1" },
+    { "temp_id": "t7", "type": "leaf", "label": "Idea 2" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "branch", "label": "" },
+    { "from_temp_id": "t1", "to_temp_id": "t3", "type": "branch", "label": "" },
+    { "from_temp_id": "t1", "to_temp_id": "t4", "type": "branch", "label": "" },
+    { "from_temp_id": "t1", "to_temp_id": "t5", "type": "branch", "label": "" },
+    { "from_temp_id": "t2", "to_temp_id": "t6", "type": "branch", "label": "" },
+    { "from_temp_id": "t2", "to_temp_id": "t7", "type": "branch", "label": "" }
+  ]
+}

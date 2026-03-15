@@ -1,0 +1,23 @@
+{
+  "name": "API Request Flow",
+  "description": "API request/response flow with validation and error handling",
+  "chartType": "flowchart",
+  "nodes": [
+    { "temp_id": "t1", "type": "start", "label": "Start" },
+    { "temp_id": "t2", "type": "process", "label": "Receive Request" },
+    { "temp_id": "t3", "type": "decision", "label": "Valid Input?" },
+    { "temp_id": "t4", "type": "process", "label": "Process Request" },
+    { "temp_id": "t5", "type": "process", "label": "Return Response" },
+    { "temp_id": "t6", "type": "end", "label": "End" },
+    { "temp_id": "t7", "type": "process", "label": "Return Error (400)" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "default", "label": "" },
+    { "from_temp_id": "t2", "to_temp_id": "t3", "type": "default", "label": "" },
+    { "from_temp_id": "t3", "to_temp_id": "t4", "type": "default", "label": "Yes" },
+    { "from_temp_id": "t3", "to_temp_id": "t7", "type": "default", "label": "No" },
+    { "from_temp_id": "t4", "to_temp_id": "t5", "type": "default", "label": "" },
+    { "from_temp_id": "t5", "to_temp_id": "t6", "type": "default", "label": "" },
+    { "from_temp_id": "t7", "to_temp_id": "t6", "type": "default", "label": "" }
+  ]
+}

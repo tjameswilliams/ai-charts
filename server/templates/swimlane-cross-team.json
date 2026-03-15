@@ -1,0 +1,37 @@
+{
+  "name": "Cross-Team Workflow",
+  "description": "Feature development workflow across Frontend, Backend, and QA teams",
+  "chartType": "swimlane",
+  "nodes": [
+    { "temp_id": "t1", "type": "start", "label": "Start" },
+    { "temp_id": "t2", "type": "process", "label": "Design UI" },
+    { "temp_id": "t3", "type": "process", "label": "Build API" },
+    { "temp_id": "t4", "type": "process", "label": "Implement Frontend" },
+    { "temp_id": "t5", "type": "process", "label": "Integrate API" },
+    { "temp_id": "t6", "type": "process", "label": "Write Tests" },
+    { "temp_id": "t7", "type": "process", "label": "Run QA" },
+    { "temp_id": "t8", "type": "decision", "label": "Pass?" },
+    { "temp_id": "t9", "type": "process", "label": "Fix Bugs" },
+    { "temp_id": "t10", "type": "process", "label": "Deploy" },
+    { "temp_id": "t11", "type": "end", "label": "End" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "default", "label": "" },
+    { "from_temp_id": "t1", "to_temp_id": "t3", "type": "default", "label": "" },
+    { "from_temp_id": "t2", "to_temp_id": "t4", "type": "default", "label": "" },
+    { "from_temp_id": "t3", "to_temp_id": "t5", "type": "default", "label": "" },
+    { "from_temp_id": "t4", "to_temp_id": "t5", "type": "default", "label": "" },
+    { "from_temp_id": "t5", "to_temp_id": "t6", "type": "default", "label": "" },
+    { "from_temp_id": "t6", "to_temp_id": "t7", "type": "default", "label": "" },
+    { "from_temp_id": "t7", "to_temp_id": "t8", "type": "default", "label": "" },
+    { "from_temp_id": "t8", "to_temp_id": "t10", "type": "default", "label": "Yes" },
+    { "from_temp_id": "t8", "to_temp_id": "t9", "type": "default", "label": "No" },
+    { "from_temp_id": "t9", "to_temp_id": "t7", "type": "default", "label": "" },
+    { "from_temp_id": "t10", "to_temp_id": "t11", "type": "default", "label": "" }
+  ],
+  "groups": [
+    { "label": "Frontend", "node_temp_ids": ["t1", "t2", "t4"], "color": "#3b82f6" },
+    { "label": "Backend", "node_temp_ids": ["t3", "t5", "t10", "t11"], "color": "#8b5cf6" },
+    { "label": "QA", "node_temp_ids": ["t6", "t7", "t8", "t9"], "color": "#ef4444" }
+  ]
+}

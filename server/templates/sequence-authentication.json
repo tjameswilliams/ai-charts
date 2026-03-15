@@ -1,0 +1,19 @@
+{
+  "name": "Authentication Flow",
+  "description": "User login sequence with token exchange",
+  "chartType": "sequence",
+  "nodes": [
+    { "temp_id": "t1", "type": "actor", "label": "User" },
+    { "temp_id": "t2", "type": "participant", "label": "Frontend" },
+    { "temp_id": "t3", "type": "participant", "label": "Auth Service" },
+    { "temp_id": "t4", "type": "participant", "label": "User Store" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "sync_message", "label": "Enter Credentials" },
+    { "from_temp_id": "t2", "to_temp_id": "t3", "type": "sync_message", "label": "POST /auth/login" },
+    { "from_temp_id": "t3", "to_temp_id": "t4", "type": "sync_message", "label": "Verify Credentials" },
+    { "from_temp_id": "t4", "to_temp_id": "t3", "type": "return_message", "label": "User Data" },
+    { "from_temp_id": "t3", "to_temp_id": "t2", "type": "return_message", "label": "JWT Token" },
+    { "from_temp_id": "t2", "to_temp_id": "t1", "type": "return_message", "label": "Redirect to Dashboard" }
+  ]
+}

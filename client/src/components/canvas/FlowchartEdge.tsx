@@ -2,12 +2,15 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getBezierPath,
+  getStraightPath,
+  getSmoothStepPath,
   type EdgeProps,
 } from "@xyflow/react";
 import type { FlowEdge, EdgeType } from "../../types";
 
 interface FlowchartEdgeData {
   edge: FlowEdge;
+  routingMode?: "bezier" | "straight" | "orthogonal";
 }
 
 const edgeColors: Record<EdgeType, string> = {
@@ -19,6 +22,11 @@ const edgeColors: Record<EdgeType, string> = {
   one_to_one: "#38bdf8",
   one_to_many: "#38bdf8",
   many_to_many: "#38bdf8",
+  branch: "#a78bfa",
+  sync_message: "#71717a",
+  async_message: "#8b5cf6",
+  return_message: "#52525b",
+  self_message: "#71717a",
 };
 
 const edgeDash: Record<EdgeType, string | undefined> = {
@@ -30,6 +38,11 @@ const edgeDash: Record<EdgeType, string | undefined> = {
   one_to_one: undefined,
   one_to_many: undefined,
   many_to_many: undefined,
+  branch: undefined,
+  sync_message: undefined,
+  async_message: "8 4",
+  return_message: "4 4",
+  self_message: undefined,
 };
 
 export function FlowchartEdge(props: EdgeProps) {
@@ -47,18 +60,16 @@ export function FlowchartEdge(props: EdgeProps) {
 
   const edgeData = data as unknown as FlowchartEdgeData | undefined;
   const edge = edgeData?.edge;
+  const routingMode = edgeData?.routingMode || "bezier";
   const edgeType: EdgeType = (edge?.type as EdgeType) || "default";
   const color = edgeColors[edgeType];
   const dash = edgeDash[edgeType];
 
-  const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
+  const pathParams = { sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition };
+  const getPathFn = routingMode === "straight" ? getStraightPath
+    : routingMode === "orthogonal" ? getSmoothStepPath
+    : getBezierPath;
+  const [edgePath, labelX, labelY] = getPathFn(pathParams);
 
   return (
     <>

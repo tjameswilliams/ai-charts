@@ -1,0 +1,19 @@
+{
+  "name": "API Request Flow",
+  "description": "Client-server API request/response sequence",
+  "chartType": "sequence",
+  "nodes": [
+    { "temp_id": "t1", "type": "actor", "label": "Client" },
+    { "temp_id": "t2", "type": "participant", "label": "API Gateway" },
+    { "temp_id": "t3", "type": "participant", "label": "Service" },
+    { "temp_id": "t4", "type": "participant", "label": "Database" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "sync_message", "label": "HTTP Request" },
+    { "from_temp_id": "t2", "to_temp_id": "t3", "type": "sync_message", "label": "Forward Request" },
+    { "from_temp_id": "t3", "to_temp_id": "t4", "type": "sync_message", "label": "Query" },
+    { "from_temp_id": "t4", "to_temp_id": "t3", "type": "return_message", "label": "Results" },
+    { "from_temp_id": "t3", "to_temp_id": "t2", "type": "return_message", "label": "Response" },
+    { "from_temp_id": "t2", "to_temp_id": "t1", "type": "return_message", "label": "HTTP Response" }
+  ]
+}

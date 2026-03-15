@@ -338,6 +338,11 @@ export const api = {
     },
   },
 
+  templates: {
+    list: () => request<Array<{ id: string; name: string; description: string; chartType: string }>>("/templates"),
+    get: (id: string) => request<{ id: string; name: string; description: string; chartType: string; nodes: any[]; edges: any[]; groups?: any[] }>(`/templates/${id}`),
+  },
+
   upload: async (file: File): Promise<{ url: string; filename: string; id: string }> => {
     const formData = new FormData();
     formData.append("file", file);

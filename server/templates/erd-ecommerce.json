@@ -1,0 +1,16 @@
+{
+  "name": "E-Commerce Schema",
+  "description": "Customer, Order, Product, and OrderItem entities for an e-commerce system",
+  "chartType": "erd",
+  "nodes": [
+    { "temp_id": "t1", "type": "entity", "label": "Customer", "description": "id: UUID PK\nname: VARCHAR\nemail: VARCHAR\naddress: TEXT\ncreated_at: TIMESTAMP" },
+    { "temp_id": "t2", "type": "entity", "label": "Order", "description": "id: UUID PK\ncustomer_id: UUID FK\nstatus: VARCHAR\ntotal: DECIMAL\nordered_at: TIMESTAMP" },
+    { "temp_id": "t3", "type": "entity", "label": "Product", "description": "id: UUID PK\nname: VARCHAR\ndescription: TEXT\nprice: DECIMAL\nstock: INTEGER" },
+    { "temp_id": "t4", "type": "entity", "label": "OrderItem", "description": "id: UUID PK\norder_id: UUID FK\nproduct_id: UUID FK\nquantity: INTEGER\nunit_price: DECIMAL" }
+  ],
+  "edges": [
+    { "from_temp_id": "t1", "to_temp_id": "t2", "type": "one-to-many", "label": "places" },
+    { "from_temp_id": "t2", "to_temp_id": "t4", "type": "one-to-many", "label": "contains" },
+    { "from_temp_id": "t3", "to_temp_id": "t4", "type": "one-to-many", "label": "included in" }
+  ]
+}
